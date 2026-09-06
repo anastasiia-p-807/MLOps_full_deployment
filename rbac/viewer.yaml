@@ -1,8 +1,315 @@
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: final-viewer
-rules:
-  - apiGroups: ["*"]
-    resources: ["*"]
-    verbs: ["get", "list", "watch"]
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "Role",
+  "metadata": {
+    "name": "viewer",
+    "namespace": "staging"
+  },
+  "rules": [
+    {
+      "apiGroups": [
+        ""
+      ],
+      "resources": [
+        "pods",
+        "pods/log",
+        "services",
+        "endpoints",
+        "events"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    },
+    {
+      "apiGroups": [
+        "apps"
+      ],
+      "resources": [
+        "deployments",
+        "replicasets",
+        "statefulsets",
+        "daemonsets"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    },
+    {
+      "apiGroups": [
+        "batch"
+      ],
+      "resources": [
+        "jobs",
+        "cronjobs"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    }
+  ]
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "RoleBinding",
+  "metadata": {
+    "name": "viewer",
+    "namespace": "staging"
+  },
+  "subjects": [
+    {
+      "kind": "Group",
+      "name": "viewer",
+      "apiGroup": "rbac.authorization.k8s.io"
+    }
+  ],
+  "roleRef": {
+    "apiGroup": "rbac.authorization.k8s.io",
+    "kind": "Role",
+    "name": "viewer"
+  }
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "Role",
+  "metadata": {
+    "name": "viewer",
+    "namespace": "production"
+  },
+  "rules": [
+    {
+      "apiGroups": [
+        ""
+      ],
+      "resources": [
+        "pods",
+        "pods/log",
+        "services",
+        "endpoints",
+        "events"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    },
+    {
+      "apiGroups": [
+        "apps"
+      ],
+      "resources": [
+        "deployments",
+        "replicasets",
+        "statefulsets",
+        "daemonsets"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    },
+    {
+      "apiGroups": [
+        "batch"
+      ],
+      "resources": [
+        "jobs",
+        "cronjobs"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    }
+  ]
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "RoleBinding",
+  "metadata": {
+    "name": "viewer",
+    "namespace": "production"
+  },
+  "subjects": [
+    {
+      "kind": "Group",
+      "name": "viewer",
+      "apiGroup": "rbac.authorization.k8s.io"
+    }
+  ],
+  "roleRef": {
+    "apiGroup": "rbac.authorization.k8s.io",
+    "kind": "Role",
+    "name": "viewer"
+  }
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "Role",
+  "metadata": {
+    "name": "viewer",
+    "namespace": "mlops-system"
+  },
+  "rules": [
+    {
+      "apiGroups": [
+        ""
+      ],
+      "resources": [
+        "pods",
+        "pods/log",
+        "services",
+        "endpoints",
+        "events"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    },
+    {
+      "apiGroups": [
+        "apps"
+      ],
+      "resources": [
+        "deployments",
+        "replicasets",
+        "statefulsets",
+        "daemonsets"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    },
+    {
+      "apiGroups": [
+        "batch"
+      ],
+      "resources": [
+        "jobs",
+        "cronjobs"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    }
+  ]
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "RoleBinding",
+  "metadata": {
+    "name": "viewer",
+    "namespace": "mlops-system"
+  },
+  "subjects": [
+    {
+      "kind": "Group",
+      "name": "viewer",
+      "apiGroup": "rbac.authorization.k8s.io"
+    }
+  ],
+  "roleRef": {
+    "apiGroup": "rbac.authorization.k8s.io",
+    "kind": "Role",
+    "name": "viewer"
+  }
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "Role",
+  "metadata": {
+    "name": "viewer",
+    "namespace": "monitoring"
+  },
+  "rules": [
+    {
+      "apiGroups": [
+        ""
+      ],
+      "resources": [
+        "pods",
+        "pods/log",
+        "services",
+        "endpoints",
+        "events"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    },
+    {
+      "apiGroups": [
+        "apps"
+      ],
+      "resources": [
+        "deployments",
+        "replicasets",
+        "statefulsets",
+        "daemonsets"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    },
+    {
+      "apiGroups": [
+        "batch"
+      ],
+      "resources": [
+        "jobs",
+        "cronjobs"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    }
+  ]
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "RoleBinding",
+  "metadata": {
+    "name": "viewer",
+    "namespace": "monitoring"
+  },
+  "subjects": [
+    {
+      "kind": "Group",
+      "name": "viewer",
+      "apiGroup": "rbac.authorization.k8s.io"
+    }
+  ],
+  "roleRef": {
+    "apiGroup": "rbac.authorization.k8s.io",
+    "kind": "Role",
+    "name": "viewer"
+  }
+}

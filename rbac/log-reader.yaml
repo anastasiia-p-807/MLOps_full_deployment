@@ -1,0 +1,176 @@
+{
+  "apiVersion": "v1",
+  "kind": "ServiceAccount",
+  "metadata": {
+    "name": "log-reader",
+    "namespace": "monitoring"
+  }
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "Role",
+  "metadata": {
+    "name": "pod-log-reader",
+    "namespace": "staging"
+  },
+  "rules": [
+    {
+      "apiGroups": [
+        ""
+      ],
+      "resources": [
+        "pods"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    },
+    {
+      "apiGroups": [
+        ""
+      ],
+      "resources": [
+        "pods/log"
+      ],
+      "verbs": [
+        "get"
+      ]
+    }
+  ]
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "RoleBinding",
+  "metadata": {
+    "name": "pod-log-reader",
+    "namespace": "staging"
+  },
+  "subjects": [
+    {
+      "kind": "ServiceAccount",
+      "name": "log-reader",
+      "namespace": "monitoring"
+    }
+  ],
+  "roleRef": {
+    "apiGroup": "rbac.authorization.k8s.io",
+    "kind": "Role",
+    "name": "pod-log-reader"
+  }
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "Role",
+  "metadata": {
+    "name": "pod-log-reader",
+    "namespace": "production"
+  },
+  "rules": [
+    {
+      "apiGroups": [
+        ""
+      ],
+      "resources": [
+        "pods"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    },
+    {
+      "apiGroups": [
+        ""
+      ],
+      "resources": [
+        "pods/log"
+      ],
+      "verbs": [
+        "get"
+      ]
+    }
+  ]
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "RoleBinding",
+  "metadata": {
+    "name": "pod-log-reader",
+    "namespace": "production"
+  },
+  "subjects": [
+    {
+      "kind": "ServiceAccount",
+      "name": "log-reader",
+      "namespace": "monitoring"
+    }
+  ],
+  "roleRef": {
+    "apiGroup": "rbac.authorization.k8s.io",
+    "kind": "Role",
+    "name": "pod-log-reader"
+  }
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "Role",
+  "metadata": {
+    "name": "pod-log-reader",
+    "namespace": "mlops-system"
+  },
+  "rules": [
+    {
+      "apiGroups": [
+        ""
+      ],
+      "resources": [
+        "pods"
+      ],
+      "verbs": [
+        "get",
+        "list",
+        "watch"
+      ]
+    },
+    {
+      "apiGroups": [
+        ""
+      ],
+      "resources": [
+        "pods/log"
+      ],
+      "verbs": [
+        "get"
+      ]
+    }
+  ]
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "RoleBinding",
+  "metadata": {
+    "name": "pod-log-reader",
+    "namespace": "mlops-system"
+  },
+  "subjects": [
+    {
+      "kind": "ServiceAccount",
+      "name": "log-reader",
+      "namespace": "monitoring"
+    }
+  ],
+  "roleRef": {
+    "apiGroup": "rbac.authorization.k8s.io",
+    "kind": "Role",
+    "name": "pod-log-reader"
+  }
+}

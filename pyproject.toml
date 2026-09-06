@@ -5,5 +5,9 @@ src = ["apps", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["apps"]
+known-third-party = ["evidently"]
+
 [tool.black]
 line-length = 100

@@ -27,13 +27,17 @@ def main() -> None:
         archive_existing_versions=args.stage == "Production",
     )
 
-    logger.info(json.dumps({
-        "event": "model_stage_transition",
-        "model_name": args.model_name,
-        "version": args.version,
-        "stage": args.stage,
-        "actor": os.getenv("USER", "unknown"),
-    }))
+    logger.info(
+        json.dumps(
+            {
+                "event": "model_stage_transition",
+                "model_name": args.model_name,
+                "version": args.version,
+                "stage": args.stage,
+                "actor": os.getenv("USER", "unknown"),
+            }
+        )
+    )
 
 
 if __name__ == "__main__":

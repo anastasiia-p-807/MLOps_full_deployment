@@ -258,6 +258,15 @@ data:
             "httpMethod": "POST",
             "timeInterval": "15s"
           }
+        },
+        {
+          "name": "Loki",
+          "uid": "mlops-loki",
+          "type": "loki",
+          "access": "proxy",
+          "url": "http://loki.monitoring.svc.cluster.local:3100",
+          "isDefault": false,
+          "editable": false
         }
       ]
     }
