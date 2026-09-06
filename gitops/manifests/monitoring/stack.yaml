@@ -124,6 +124,8 @@ spec:
     metadata:
       labels:
         app: grafana
+      annotations:
+        mlops/config-revision: "loki-datasource-v1"
     spec:
       containers:
         - name: grafana

@@ -23,7 +23,7 @@ jobs:
           pip install -r apps/training/requirements.txt
           pip install -r apps/inference/requirements.txt
           pip install -r apps/evidently/requirements.txt
-          pip install ruff black pytest
+          pip install -r requirements-dev.txt
           ruff check apps tests
           black --check apps tests
           pytest tests
