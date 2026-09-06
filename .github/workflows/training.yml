@@ -6,6 +6,8 @@ on:
     paths:
       - "apps/**"
       - "tests/**"
+      - "pyproject.toml"
+      - "requirements-dev.txt"
       - ".github/workflows/training.yml"
   workflow_dispatch:
 
