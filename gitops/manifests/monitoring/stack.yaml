@@ -134,6 +134,26 @@ spec:
           ports:
             - name: http
               containerPort: 3000
+          volumeMounts:
+            - name: alerting
+              mountPath: /etc/grafana/provisioning/alerting
+              readOnly: true
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+              readOnly: true
+      volumes:
+        - name: alerting
+          configMap:
+            name: grafana-alert-policy
+            items:
+              - key: mlops-alerts.json
+                path: mlops-alerts.json
+        - name: datasources
+          configMap:
+            name: grafana-alert-policy
+            items:
+              - key: mlops-datasource.json
+                path: mlops-datasource.json
 ---
 apiVersion: v1
 kind: Service
