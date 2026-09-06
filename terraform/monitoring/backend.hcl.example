@@ -1,0 +1,3 @@
+bucket = "s3-terraform-bucket-mlops"
+key    = "final/monitoring/terraform.tfstate"
+region = "eu-central-1"

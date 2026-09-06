@@ -1,0 +1,28 @@
+global:
+  domain: ""
+
+configs:
+  params:
+    server.insecure: true
+  cm:
+    timeout.reconciliation: 60s
+  rbac:
+    policy.default: role:readonly
+    policy.csv: |
+      g, argocd-admins, role:admin
+
+server:
+  service:
+    type: ClusterIP
+  extraArgs:
+    - --insecure
+
+controller:
+  timeout:
+    reconciliation: 60s
+
+repoServer:
+  timeoutSeconds: 180
+
+applicationSet:
+  enabled: true

@@ -1,0 +1,26 @@
+stages:
+  - quality
+  - train
+
+quality:
+  stage: quality
+  image: python:3.13-slim
+  script:
+    - pip install ruff black pytest
+    - ruff check apps
+    - black --check apps
+
+train-model:
+  stage: train
+  image:
+    name: amazon/aws-cli:2.15.0
+    entrypoint: [""]
+  script:
+    - |
+      aws stepfunctions start-execution \
+        --region "$AWS_DEFAULT_REGION" \
+        --state-machine-arn "$AWS_STEP_FUNCTION_ARN" \
+        --name "final-train-${CI_PIPELINE_ID}-${CI_COMMIT_SHORT_SHA}" \
+        --input "{\"source\":\"gitlab-ci\",\"commit\":\"$CI_COMMIT_SHORT_SHA\",\"dataset_version\":\"iris-v1\"}"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'

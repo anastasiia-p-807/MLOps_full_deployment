@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alert-policy
+  namespace: monitoring
+data:
+  alerts: |
+    - latency_p95_gt_500ms
+    - error_rate_gt_1_percent
+    - drift_score_gt_0_2

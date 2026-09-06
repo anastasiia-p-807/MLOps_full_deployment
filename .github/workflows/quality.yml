@@ -1,0 +1,36 @@
+name: Final quality checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Python quality
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r apps/training/requirements.txt
+          pip install -r apps/inference/requirements.txt
+          pip install ruff black pytest
+          ruff check apps tests
+          black --check apps tests
+          pytest tests
+      - name: Terraform fmt
+        uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive terraform
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "0"

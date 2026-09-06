@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: final-platform-applications
+  namespace: mlops-system
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  generators:
+    - list:
+        elements:
+          - name: mlflow
+            path: gitops/manifests/mlflow
+            namespace: mlops-system
+          - name: monitoring
+            path: gitops/manifests/monitoring
+            namespace: monitoring
+          - name: staging
+            path: gitops/manifests/inference/staging
+            namespace: staging
+          - name: production
+            path: gitops/manifests/inference/production
+            namespace: production
+  template:
+    metadata:
+      name: 'final-{{ .name }}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/anastasiia-p-807/MLOps_full_deployment.git
+        targetRevision: HEAD
+        path: '{{ .path }}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{ .namespace }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

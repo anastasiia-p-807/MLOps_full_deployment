@@ -1,0 +1,9 @@
+[tool.ruff]
+line-length = 100
+src = ["apps", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+
+[tool.black]
+line-length = 100
