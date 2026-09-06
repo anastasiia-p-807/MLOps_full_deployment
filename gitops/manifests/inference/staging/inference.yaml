@@ -4,8 +4,8 @@ metadata:
   name: inference-config
   namespace: staging
 data:
-  MODEL_VERSION: "staging"
-  MODEL_SHA256: "replace-with-staging-sha256"
+  MODEL_VERSION: "run-e1fcd92b3cb3"
+  MODEL_SHA256: "a46e52ece3d61aba16945ce6dfdc1fe9e38ecc61f0a4b19fffe8d6277eed5ba9"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
         - name: inference
-          image: 616150220350.dkr.ecr.eu-central-1.amazonaws.com/final-inference:latest
+          image: 616150220350.dkr.ecr.eu-central-1.amazonaws.com/final-inference:e1fcd92b3cb3
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
