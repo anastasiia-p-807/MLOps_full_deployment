@@ -20,6 +20,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r apps/training/requirements.txt
           pip install -r apps/inference/requirements.txt
+          pip install -r apps/evidently/requirements.txt
           pip install ruff black pytest
           ruff check apps tests
           black --check apps tests

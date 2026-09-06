@@ -235,16 +235,48 @@ metadata:
   namespace: monitoring
 spec:
   schedule: "*/30 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
   jobTemplate:
     spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 900
       template:
         spec:
-          restartPolicy: OnFailure
+          restartPolicy: Never
+          automountServiceAccountToken: false
           containers:
             - name: drift
               image: python:3.13-slim
+              env:
+                - name: PUSHGATEWAY_URL
+                  value: http://pushgateway.monitoring.svc.cluster.local:9091
+                - name: DO_NOT_TRACK
+                  value: "1"
               command:
                 - /bin/sh
-                - -c
+                - -ec
                 - |
-                  pip install --no-cache-dir prometheus-client && python -c "from prometheus_client import CollectorRegistry, Gauge, push_to_gateway; registry = CollectorRegistry(); Gauge('evidently_drift_score', 'Demo drift score for final project', registry=registry).set(0.03); push_to_gateway('pushgateway.monitoring.svc.cluster.local:9091', job='evidently_drift', registry=registry)"
+                  pip install --no-cache-dir -r /scripts/requirements.txt
+                  python /scripts/drift_job.py --scenario baseline --output-dir /reports
+                  python /scripts/drift_job.py --scenario shifted --output-dir /reports
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+                - name: reports
+                  mountPath: /reports
+          volumes:
+            - name: scripts
+              configMap:
+                name: evidently-drift-script
+            - name: reports
+              emptyDir: {}
