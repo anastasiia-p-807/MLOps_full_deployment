@@ -1,0 +1,41 @@
+# Terraform local files
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/terraform.tfvars
+**/terraform.tfvars.json
+**/backend.hcl
+
+# Plans and logs
+**/*.tfplan
+**/crash.log
+**/crash.*.log
+other/*
+zips/*
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Local environment
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Generated model artifacts
+/apps/inference/model/*
+!/apps/inference/model/.gitkeep
+/best_model/
+/mlruns/
+/mlartifacts/
+*.joblib
+*.pkl
+*.pickle
