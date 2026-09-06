@@ -1,23 +1,28 @@
-# Final Project: Production-ready MLOps platform
+# Final Project: MLOps platform в AWS
 
-Проєкт збирає компоненти з попередніх ДЗ у єдину MLOps-платформу в AWS: EKS, Argo CD, MLflow Model Registry, inference API, моніторинг, security baseline і контрольований deployment моделі.
+Проєкт об'єднує EKS, Argo CD, MLflow Model Registry, inference API та моніторинг. Перевірено ручне навчання моделі, promotion у Production та розгортання образу через GitOps.
 
 ## Scope
 
-Реалізуються обов'язкові блоки A-D і рекомендовані блоки E-F. Бонусні завдання не входять у scope. Локальний fallback не використовується, основний сценарій - AWS/EKS.
+Нижче описано виконані кроки та перевірені результати. Незавершені частини винесено до розділу «Подальші покращення»; частина з них належить до обов'язкових вимог завдання. Основний сценарій - AWS/EKS, без локального fallback та бонусних завдань.
+
+## Доступ для перевірки
+
+Результати роботи показано на скріншотах у `Screenshots/`. Доступ до UI та API реалізовано через `kubectl port-forward`; посилання `localhost` працюють лише на комп'ютері, де запущено відповідну команду. Зовнішній Ingress/Load Balancer не налаштовано. Самостійний доступ з іншого комп'ютера потребує окремо наданого доступу до кластера та власного port-forward або узгодженої демонстрації екрана.
+
+Незавершені пункти, зокрема частину обов'язкових вимог, перелічено в розділі «Подальші покращення». Їх не подано як виконані.
 
 ## Архітектура
 
 ```text
-GitHub push
-  -> GitHub Actions training workflow
-  -> AWS Step Functions
-  -> training job registers model in MLflow Registry as Staging
-  -> manual promotion script moves model to Production
-  -> GitOps manifest update changes production model version
-  -> Argo CD syncs Kubernetes deployment
-  -> FastAPI inference serves predictions
-  -> Prometheus/Grafana/Loki/Evidently monitor service and model quality
+Ручний запуск train_register.py -> MLflow Registry (Staging)
+  -> завантаження model.joblib -> Podman build -> Amazon ECR
+  -> GitHub manifests -> Argo CD -> staging inference
+  -> ручний promotion у MLflow -> production manifest -> production inference
+
+Inference /metrics -> Prometheus -> Grafana
+Inference JSON logs -> Alloy -> Loki -> Grafana
+Evidently CronJob (iris_demo) -> PushGateway -> Prometheus -> Grafana alerts
 ```
 
 
@@ -41,7 +46,7 @@ GitHub push
 staging       - staging inference deployment для нових версій моделі
 production    - production inference deployment
 mlops-system  - Argo CD, MLflow, MinIO/PostgreSQL, service tooling
-monitoring    - Prometheus, Grafana, Loki, PushGateway, Evidently CronJob
+monitoring    - Prometheus, Grafana, Loki, Alloy, PushGateway, Evidently CronJob
 ```
 
 
@@ -81,13 +86,12 @@ monitoring    - Prometheus, Grafana, Loki, PushGateway, Evidently CronJob
 - AWS CLI з profile `default`
 - kubectl
 - Helm
-- Docker або Podman
+- Podman
 - Python 3.13
-- GitHub Actions secrets для AWS-доступу
 
-## Bootstrap з нуля
+## Виконане розгортання
 
-1. Створити/перевірити S3 bucket для Terraform state.
+1. Використано S3 bucket `s3-terraform-bucket-mlops`, регіон `eu-central-1`, AWS profile `default`. У `vpc/`, `eks/`, `argocd/` підготовлено локальні `backend.hcl` і `terraform.tfvars`; state keys мають префікс `final/`.
 2. Підняти VPC:
 
 ```powershell
@@ -117,23 +121,22 @@ terraform plan
 terraform apply
 ```
 
-5. Перед GitOps sync створити runtime secrets, які не зберігаються в Git:
+5. Перед GitOps sync створено runtime secrets з окремими випадковими паролями. Вони зберігаються у Kubernetes, а не в Git. Перевірка наявності:
 
 ```powershell
-kubectl create namespace mlops-system --dry-run=client -o yaml | kubectl apply -f -
-kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
-kubectl -n mlops-system create secret generic minio-credentials --from-literal=root-user=minioadmin --from-literal=root-password=minioadmin123
-kubectl -n mlops-system create secret generic postgres-credentials --from-literal=POSTGRES_DB=mlflow --from-literal=POSTGRES_USER=mlflow --from-literal=POSTGRES_PASSWORD=mlflow123
-kubectl -n monitoring create secret generic grafana-admin --from-literal=GF_SECURITY_ADMIN_USER=admin --from-literal=GF_SECURITY_ADMIN_PASSWORD=admin123
+kubectl -n mlops-system get secrets minio-credentials postgres-credentials
+kubectl -n monitoring get secret grafana-admin
 ```
 
-6. Після встановлення Argo CD застосувати root ApplicationSet:
+6. Після встановлення Argo CD застосовано root ApplicationSet з кореня репозиторію:
 
 ```powershell
 kubectl apply -f terraform/argocd/applicationset.yaml
 ```
 
-ApplicationSet читає GitHub repository і створює Argo CD Applications для MLflow, monitoring, staging inference та production inference.
+ApplicationSet читає GitHub repository і створює Argo CD Applications для MLflow, monitoring, staging inference та production inference. Дочірня Application `final-rbac` застосовує ролі з папки `rbac/`.
+
+У EKS працюють два CPU-узли: один вузол досяг ліміту кількості pod-ів. MinIO/PostgreSQL використовують `emptyDir`; їхні дані не зберігаються після заміни pod-а.
 
 7. Перевірити статус:
 
@@ -167,36 +170,63 @@ kubectl -n production port-forward svc/inference 8080:80
 
 ## Model Registry flow
 
-Training pipeline реєструє модель у MLflow Model Registry з назвою `iris-classifier`. Нова версія переходить у Staging автоматично. Production promotion виконується вручну:
+Скрипт `train_register.py` було запущено вручну. Він зареєстрував `iris-classifier`, версію `1`, зі стадією Staging. Виконано promotion:
 
 ```powershell
-python apps/training/promote_model.py --model-name iris-classifier --version <version> --stage Production
+.\.venv\Scripts\python.exe apps/training/promote_model.py --model-name iris-classifier --version 1 --stage Production
 ```
 
-Rollback виконується так само, але з попередньою production-версією.
+Перевірений run ID: `e1fcd92b3cb34612b72fccc34c082978`. Образ `final-inference:e1fcd92b3cb3` опубліковано в ECR. SHA256 локального `model.joblib` збігається зі значенням у MLflow.
 
-## Deployment strategy
+## Перевірка inference
 
-Обрана Blue-Green стратегія: staging і production мають окремі namespace-и та окремі deployment-и. Нова модель перевіряється у staging, після promotion production manifest отримує нову model version/checksum. Для навчального проєкту це простіше, надійніше й легше демонструється, ніж canary.
+Staging і production мають окремі namespace-и та Deployment-и. Після перевірки staging оновлено production manifest і дочекалися синхронізації Argo CD. Це звичайний rollout; Blue-Green перемикач трафіку не реалізовано.
 
-## Security baseline
+Для входу `[5.1, 3.5, 1.4, 0.2]` production API повернув `prediction: 0`, ймовірність близько `0.9864` та `model_version: 1`. `/health` повернув `status: ok`.
 
-- Pydantic validation на `/predict`.
-- Rate limiting у FastAPI middleware.
-- RBAC roles у `rbac/`.
-- Model artifact checksum SHA256 перед завантаженням моделі.
-- Audit events для promotion/rollback у structured JSON logs.
-- Threat model описаний у `docs/THREAT_MODEL.md`.
+## Безпека та перевірки
 
-## Recommended blocks
+- Перевірено SHA256 моделі під час запуску контейнера.
+- RBAC застосовано через Argo CD: `mlops-engineer` має повний доступ до staging та читання production; `viewer` - лише читання без Secrets. Дозволи та заборони перевірено через `kubectl auth can-i`; опис у `rbac/README.md`.
+- Alloy читає pod logs через окремий ServiceAccount з namespaced правами, без ClusterRole та доступу до Secrets.
+- Локально пройшли 13 training/inference/RBAC тестів і 3 drift-тести, Ruff, Black та Terraform fmt. HTTP 400/429 перевірено тестами оновленого коду; цей код ще потрібно включити в новий образ і перевірити в EKS.
+- Скрипт promotion вивів структуровану подію переходу моделі в Production у термінал. Доставку Registry audit у Loki ще не реалізовано.
+- Threat model описано у `docs/THREAT_MODEL.md`.
 
-- Evidently CronJob пише drift metrics у PushGateway/Prometheus.
-- Grafana alerts описані у `gitops/manifests/monitoring/alerts.yaml`.
-- Python tests, ruff/black, terraform fmt і Trivy workflow описані в CI.
+## Моніторинг
+
+- У Grafana Explore перевірено запити, передбачення та latency inference API.
+- У Loki отримано структуровані production-логи `{"event":"prediction","prediction":0}` через Alloy.
+- Evidently CronJob успішно виконав контрольні сценарії Iris: `baseline=0`, `shifted=0.5`. Це drift на тестових даних, а не на поточних production-передбаченнях.
+- Grafana завантажує правила latency p95 > 500 ms, HTTP 5xx > 1%, недоступності inference та demo drift > 0.2. Для `shifted` підтверджено Firing, для `baseline` - Normal.
+
+Запити для перевірки:
+
+```promql
+evidently_drift_score{source="iris_demo"}
+```
+
+```logql
+{namespace="production",app="inference"} | json | event="prediction"
+```
+
+## Подальші покращення
+
+Нижче наведено незавершені роботи, а не підтверджені результати. Обов'язкові пункти позначено номерами завдання.
+
+- **A1, A3, D:** завершити відтворюваний bootstrap без неописаних ручних кроків та узгодити README, RUNBOOK і ADR з остаточною реалізацією.
+- **A5:** створити Grafana dashboard з CPU/RAM pod-ів, request rate, p50/p95 latency та error rate.
+- **B1:** завершити автоматичне навчання через GitHub Actions і AWS Step Functions. Workflow-файли є, але успішний наскрізний CI запуск не підтверджено.
+- **B3, B4:** реалізувати Blue-Green переключення та продемонструвати rollback. Rollback у цьому проході пропущено.
+- **C1, C2:** зібрати оновлений inference-образ і перевірити HTTP 400/429 у кластері.
+- **C5:** надсилати аудит операцій Model Registry у Loki.
+- **E1, E3:** обчислювати drift за реальними production-передбаченнями та описати escalation policy і contact points.
+- **F1-F3:** доповнити integration-тести повного training run, перевірити lint/hooks і сканування саме контейнерного образу в CI. Наявний Trivy workflow сканує файли репозиторію.
+- Перейти від `emptyDir` до постійного сховища для metadata та artifacts MLflow.
 
 ## Destroy
 
-Видаляти у зворотному порядку:
+Після завершення перевірок видалити ресурси у зворотному порядку. Ці команди наведено для майбутнього очищення; фінальний destroy ще не підтверджено. Починати з кореня репозиторію та дочекатися видалення дочірніх Applications до зупинки Argo CD:
 
 ```powershell
 kubectl delete -f terraform/argocd/applicationset.yaml --ignore-not-found
@@ -209,6 +239,3 @@ terraform destroy
 ```
 
 
-## Runtime secrets
-
-Перед GitOps sync створити secrets командами з README bootstrap section.
