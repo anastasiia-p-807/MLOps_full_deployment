@@ -152,8 +152,8 @@ spec:
           configMap:
             name: grafana-alert-policy
             items:
-              - key: mlops-datasource.json
-                path: mlops-datasource.json
+              - key: mlops-datasource.yaml
+                path: mlops-datasource.yaml
 ---
 apiVersion: v1
 kind: Service

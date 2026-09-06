@@ -242,7 +242,7 @@ data:
         }
       ]
     }
-  mlops-datasource.json: |
+  mlops-datasource.yaml: |
     {
       "apiVersion": 1,
       "datasources": [
