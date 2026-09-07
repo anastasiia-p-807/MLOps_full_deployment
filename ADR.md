@@ -23,13 +23,6 @@ Canary краще для поступового rollout, але потребує
 - немає плавного 90/10 traffic split;
 - потрібно уважно синхронізувати model version і checksum.
 
-## Що зробити інакше за більшого часу
-
-- Додати canary rollout через Argo Rollouts.
-- Додати OIDC для CI замість static AWS keys.
-- Перенести secrets у AWS Secrets Manager або External Secrets Operator.
-- Додати OpenTelemetry tracing.
-
 ## Вибір моделі та датасету
 
 Обрано Варіант B: публічний Iris dataset і LogisticRegression зі scikit-learn. Мета фінального проєкту - показати production-ready MLOps platform, а не складну ML-модель, тому простий класифікатор є кращим інженерним вибором.
