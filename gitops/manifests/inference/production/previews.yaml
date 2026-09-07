@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference-blue-preview
+  namespace: production
+spec:
+  selector:
+    app.kubernetes.io/name: inference
+    slot: blue
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inference-green-preview
+  namespace: production
+spec:
+  selector:
+    app.kubernetes.io/name: inference
+    slot: green
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

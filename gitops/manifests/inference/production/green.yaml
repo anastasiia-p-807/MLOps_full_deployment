@@ -1,41 +1,38 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: inference-config
+  name: inference-green-config
   namespace: production
 data:
-  MODEL_VERSION: "1"
-  MODEL_SHA256: "a46e52ece3d61aba16945ce6dfdc1fe9e38ecc61f0a4b19fffe8d6277eed5ba9"
+  MODEL_VERSION: "2"
+  MODEL_SHA256: "b8f844236936a3c0e0d676bba9b97c82f24e505ab9cb5c5217fa162da5e59484"
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: inference
+  name: inference-green
   namespace: production
-  labels:
-    app: inference
-    environment: production
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: inference
+      app: inference-green
       environment: production
   template:
     metadata:
       labels:
-        app: inference
+        app: inference-green
         environment: production
         app.kubernetes.io/name: inference
-        slot: blue
+        slot: green
     spec:
       containers:
         - name: inference
-          image: 616150220350.dkr.ecr.eu-central-1.amazonaws.com/final-inference@sha256:ae1964dc8971f320975ea75a261ce6c67b2e2605b7b530065d80a5d89c4f1ac0
+          image: 616150220350.dkr.ecr.eu-central-1.amazonaws.com/final-inference@sha256:aa48b9c99efa015c4ee5e77212b0a37fc9df62ed5668de433ec2e02bbeefd94f
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
-                name: inference-config
+                name: inference-green-config
           ports:
             - name: http
               containerPort: 8000
@@ -58,16 +55,3 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
----
-apiVersion: v1
-kind: ResourceQuota
-metadata:
-  name: inference-quota
-  namespace: production
-spec:
-  hard:
-    requests.cpu: "1"
-    requests.memory: 1536Mi
-    limits.cpu: "3"
-    limits.memory: 3Gi
-    pods: "10"
