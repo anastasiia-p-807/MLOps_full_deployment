@@ -10,11 +10,8 @@
 
 Результати роботи показано на скріншотах у `Screenshots/`. Для перевірки production inference створено окремий Service `inference-public` типу `LoadBalancer` (AWS NLB). UI Grafana, MLflow та MinIO залишаються доступними лише через `kubectl port-forward`; їхні посилання `localhost` не доступні з іншого комп'ютера.
 
-Публічний API: [health](http://a5fa5ba1610334c45b5619071d63f630-1b3a1daa13299a81.elb.eu-central-1.amazonaws.com/health), [Swagger UI](http://a5fa5ba1610334c45b5619071d63f630-1b3a1daa13299a81.elb.eu-central-1.amazonaws.com/docs). У Swagger вибрати `POST /predict`, натиснути `Try it out` та передати `{"features": [5.1, 3.5, 1.4, 0.2]}`.
+Публічний API: [health](http://a5fa5ba1610334c45b5619071d63f630-1b3a1daa13299a81.elb.eu-central-1.amazonaws.com/health), [Swagger UI](http://a5fa5ba1610334c45b5619071d63f630-1b3a1daa13299a81.elb.eu-central-1.amazonaws.com/docs). У Swagger `POST /predict` передати `{"features": [5.1, 3.5, 1.4, 0.2]}`.
 
-Це тимчасовий навчальний HTTP endpoint без TLS та авторизації; відкрито також `/metrics`. Не передавати секрети або персональні дані. Адреса працює, поки існують кластер і балансировщик. NLB платний; після перевірки його потрібно видалити разом із сервісом. Манифест: `gitops/manifests/inference/production/public-service.yaml`.
-
-Незавершені пункти, зокрема частину обов'язкових вимог, перелічено в розділі «Подальші покращення». Їх не подано як виконані.
 
 ## Архітектура
 
@@ -32,7 +29,7 @@ Evidently CronJob (iris_demo) -> PushGateway -> Prometheus -> Grafana alerts
 
 ## Модель і дані
 
-Для фінального проєкту обрано Варіант B: публічний Iris dataset і модель LogisticRegression зі scikit-learn. Такий вибір зроблено свідомо: модель тренується за секунди, легко деплоїться як REST API, має зрозумілий JSON-вхід із чотирма числовими ознаками та підходить для демонстрації MLOps-платформи без зайвих витрат часу на ML-частину.
+Обрано Варіант B: публічний Iris dataset і модель LogisticRegression зі scikit-learn: модель тренується за секунди, легко деплоїться як REST API, має зрозумілий JSON-вхід із чотирма числовими ознаками та підходить для демонстрації MLOps-платформи без зайвих витрат часу на ML-частину.
 
 Вхід inference API:
 
@@ -56,9 +53,11 @@ monitoring    - Prometheus, Grafana, Loki, Alloy, PushGateway, Evidently CronJob
 
 ## Git repository structure decision
 
-Для фінального проєкту обрано один Git repository, у якому разом зберігаються Terraform, application code, CI/CD конфігурації, документація та GitOps manifests у папці `gitops`. Це спрощує перевірку навчального проєкту: ментор бачить усю систему в одному місці, а bootstrap-процес не потребує синхронізації кількох repository.
+Оодин Git repository, у якому разом зберігаються Terraform, application code, CI/CD конфігурації, документація та GitOps manifests у папці `gitops`. Це спрощує перевірку навчального проєкту: ментор бачить усю систему в одному місці, а bootstrap-процес не потребує синхронізації кількох repository.
 
-У production-проєктах, які довго розвиваються, краще розділяти application/platform code і GitOps repository. Такий підхід зменшує ризик випадкових deploy-змін, дозволяє окремо керувати доступами до runtime-конфігурацій і робить promotion/rollback більш контрольованими. У цьому проєкті `gitops` виконує роль GitOps source всередині одного repository.
+Але звісно у production-проєктах, які довго розвиваються, краще розділяти application/platform code і GitOps repository. Такий підхід зменшує ризик випадкових deploy-змін, дозволяє окремо керувати доступами до runtime-конфігурацій і робить promotion/rollback більш контрольованими. У цьому проєкті `gitops` виконує роль GitOps source всередині одного repository.
+
+
 ## Структура
 
 ```text
@@ -211,11 +210,12 @@ kubectl get ns mlops-training
 
 Runtime secret копіюється з наявного MinIO secret без виведення значень і без запису у Git або Terraform state. У навчальному варіанті використано ті самі MinIO credentials; окремий користувач із bucket-scoped policy залишається покращенням. ServiceAccount Job не має Kubernetes API token; IAM-роль оркестратора має права на Jobs і читання логів лише в `mlops-training`, не в production.
 
-У GitHub потрібні secrets `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION=eu-central-1`. `AWS_STEP_FUNCTION_ARN` більше не потрібний: ARN `final-mlops-training` визначається для поточного AWS-аккаунта. CI-користувачу потрібні `states:DescribeStateMachine`, `states:StartExecution` для цієї state machine, `states:DescribeExecution` і `states:StopExecution` для її executions.
+У GitHub потрібні secrets `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION=eu-central-1`. ARN `final-mlops-training` визначається для поточного AWS-аккаунта. CI-користувачу потрібні `states:DescribeStateMachine`, `states:StartExecution` для цієї state machine, `states:DescribeExecution` і `states:StopExecution` для її executions.
 
 Після push змін коду або ручного `Run workflow` перевірити Step Functions -> `final-mlops-training`, Job `iris-train-*` у `mlops-training` та нову версію `iris-classifier` у Staging. Встановлення залежностей займає довше, ніж саме навчання; Job обмежено 25 хвилинами, workflow Step Functions - 30 хвилинами. Job видаляється через добу після завершення. При скасуванні CI перевірити execution/Job: скасування GitHub не гарантує зупинку Job.
 
-AWS-ресурси створено через Terraform. Наскрізний запуск перевіряється окремо; наявність state machine сама по собі не означає успішне навчання.
+**B1 підтверджено:** [GitHub training run 34129778305](https://github.com/anastasiia-p-807/MLOps_full_deployment/actions/runs/34129778305) завершився `success`; Step Functions execution `train-60ea1ba3f833-677a7f83f3e8` - `SUCCEEDED`. У MLflow створено `iris-classifier`, версію **2**, статус **Staging**, run `262e37e1645941d0973715da07ea2092`. Git SHA: `60ea1ba3f8335c6fbfe31518ea7b433637317ce0`, dataset: `iris-v1`, accuracy: `0.9473684210526315`, loss: `0.13952333940195608`. Checksum artifact записано у run metadata. Версія 1 залишилася в Production; inference deployment не змінено.
+
 
 ## Безпека та перевірки
 
@@ -247,11 +247,10 @@ evidently_drift_score{source="iris_demo"}
 
 ## Подальші покращення
 
-Нижче наведено незавершені роботи, а не підтверджені результати. Обов'язкові пункти позначено номерами завдання.
+Незавершені роботи:
 
 - **A1, A3, D:** завершити відтворюваний bootstrap без неописаних ручних кроків та узгодити README, RUNBOOK і ADR з остаточною реалізацією.
 - **A5:** створити Grafana dashboard з CPU/RAM pod-ів, request rate, p50/p95 latency та error rate.
-- **B1:** завершити автоматичне навчання через GitHub Actions і AWS Step Functions. Workflow-файли є, але успішний наскрізний CI запуск не підтверджено.
 - **B3, B4:** реалізувати Blue-Green переключення та продемонструвати rollback. Rollback у цьому проході пропущено.
 - **C1, C2:** зібрати оновлений inference-образ і перевірити HTTP 400/429 у кластері.
 - **C5:** надсилати аудит операцій Model Registry у Loki.
