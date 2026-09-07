@@ -256,8 +256,15 @@ evidently_drift_score{source="iris_demo"}
 - **C1, C2:** зібрати оновлений inference-образ і перевірити HTTP 400/429 у кластері.
 - **C5:** надсилати аудит операцій Model Registry у Loki.
 - **E1, E3:** обчислювати drift за реальними production-передбаченнями та описати escalation policy і contact points.
-- **F2-F3:** перевірити lint/hooks і сканування саме контейнерного образу в CI. Наявний Trivy workflow сканує файли репозиторію.
+- **F2:** перевірити lint/hooks для всіх типів файлів.
+- **F3:** перевірити перший CI-звіт сканування образу та усунути знайдені вразливості.
 - Перейти від `emptyDir` до постійного сховища для metadata та artifacts MLflow.
+
+## Сканування inference-образу
+
+У `Final quality checks` додано job `image-security`: збірка справжнього inference Dockerfile з тимчасовою Iris-моделлю, Trivy 0.74.0 для OS/Python залежностей, блокування job при HIGH/CRITICAL. Реліз Trivy перевіряється за SHA256. Образ не публікується; AWS credentials і production-модель не використовуються. Це перевірка CI-образу, не вже розгорнутого ECR-образу.
+
+Після push: GitHub -> Actions -> Final quality checks -> image-security. Звіт JSON усіх рівнів, таблиця HIGH/CRITICAL, image metadata та версія сканера зберігаються в Artifacts `inference-image-security-...` на 14 днів, також при спрацюванні блокування. Помилка самого сканера теж завершує job невдало; звіт у такому разі може бути відсутній. YAML і генерацію моделі перевірено локально; перший повний CI scan ще не підтверджено.
 
 ## Destroy
 
