@@ -257,14 +257,16 @@ evidently_drift_score{source="iris_demo"}
 - **C5:** надсилати аудит операцій Model Registry у Loki.
 - **E1, E3:** обчислювати drift за реальними production-передбаченнями та описати escalation policy і contact points.
 - **F2:** перевірити lint/hooks для всіх типів файлів.
-- **F3:** перевірити перший CI-звіт сканування образу та усунути знайдені вразливості.
+- **F3:** усунути залишкові OS-вразливості після появи виправлень або перевіреного переходу на інший base image; підтвердити повторний CI scan.
 - Перейти від `emptyDir` до постійного сховища для metadata та artifacts MLflow.
 
 ## Сканування inference-образу
 
 У `Final quality checks` додано job `image-security`: збірка справжнього inference Dockerfile з тимчасовою Iris-моделлю, Trivy 0.74.0 для OS/Python залежностей, блокування job при HIGH/CRITICAL. Реліз Trivy перевіряється за SHA256. Образ не публікується; AWS credentials і production-модель не використовуються. Це перевірка CI-образу, не вже розгорнутого ECR-образу.
 
-Після push: GitHub -> Actions -> Final quality checks -> image-security. Звіт JSON усіх рівнів, таблиця HIGH/CRITICAL, image metadata та версія сканера зберігаються в Artifacts `inference-image-security-...` на 14 днів, також при спрацюванні блокування. Помилка самого сканера теж завершує job невдало; звіт у такому разі може бути відсутній. YAML і генерацію моделі перевірено локально; перший повний CI scan ще не підтверджено.
+Після push: GitHub -> Actions -> Final quality checks -> image-security. Звіт JSON усіх рівнів, таблиця HIGH/CRITICAL, image metadata та версія сканера зберігаються в Artifacts `inference-image-security-...` на 14 днів, також при спрацюванні блокування. Помилка самого сканера теж завершує job невдало; звіт у такому разі може бути відсутній.
+
+Scan від 07.09.2026 виявив 4 HIGH у Python та 51 HIGH / 3 CRITICAL у Debian. Після оновлення FastAPI/Starlette й видалення runtime pip/setuptools повторний локальний Trivy scan показав 0 HIGH/CRITICAL у Python; OS-знахідки залишилися без FixedVersion. Перевірено 26 тестів і роботу non-root контейнера (`health`, `predict`, `metrics`). CI gate не вимкнено; оновлений образ ще не опубліковано в ECR і не розгорнуто в Production. [Деталі перевірки](docs/security-scan.md).
 
 ## Destroy
 
