@@ -6,10 +6,10 @@
 
 ## Викотити нову версію моделі
 
-1. Запустити training workflow у GitHub Actions або зробити push у main.
+1. Після bootstrap `terraform/training` і runtime secret запустити `Final training pipeline` у GitHub Actions або зробити push зі змінами training-коду у main. Дочекатися `SUCCEEDED` у Step Functions `final-mlops-training`; команда старту не є підтвердженням завершення.
 2. Перевірити новий run у MLflow.
 3. Перевірити, що нова model version має stage `Staging`.
-4. Протестувати staging inference endpoint.
+4. Завантажити artifact нової версії, зібрати й опублікувати inference-образ, оновити staging manifest та протестувати staging inference endpoint. Training pipeline сам не перебудовує inference-образ і не перемикає трафік.
 5. Виконати promotion:
 
 ```powershell

@@ -1,0 +1,6 @@
+bucket       = "s3-terraform-bucket-mlops"
+key          = "final/training/terraform.tfstate"
+region       = "eu-central-1"
+profile      = "default"
+encrypt      = true
+use_lockfile = true

@@ -188,6 +188,35 @@ Staging і production мають окремі namespace-и та Deployment-и. �
 
 Для входу `[5.1, 3.5, 1.4, 0.2]` production API повернув `prediction: 0`, ймовірність близько `0.9864` та `model_version: 1`. `/health` повернув `status: ok`.
 
+## Автоматичне навчання
+
+`Final training pipeline`: тести -> Lambda `ValidateInput` -> Step Functions `TrainAndRegister` -> EKS Job -> MLflow Registry (`Staging`). Production не змінюється. Job завантажує training script і залежності з конкретного Git SHA цього публічного репозиторію. Метрики, dataset version, SHA та checksum зберігаються у MLflow. GitHub очікує завершення Step Functions; помилка Job означає помилку workflow.
+
+Одноразове налаштування з кореня репозиторію після розгортання MLflow:
+
+```powershell
+Copy-Item terraform/training/backend.hcl.example terraform/training/backend.hcl
+terraform -chdir=terraform/training init -backend-config backend.hcl
+terraform -chdir=terraform/training validate
+terraform -chdir=terraform/training plan -out training.tfplan
+terraform -chdir=terraform/training apply training.tfplan
+```
+
+Додати `rbac/training-runner.yaml` у Git; Argo CD Application `final-rbac` створить namespace `mlops-training` та права оркестратора. Після синхронізації:
+
+```powershell
+kubectl get ns mlops-training
+.\.venv\Scripts\python.exe apps/training/prepare_runtime_secret.py
+```
+
+Runtime secret копіюється з наявного MinIO secret без виведення значень і без запису у Git або Terraform state. У навчальному варіанті використано ті самі MinIO credentials; окремий користувач із bucket-scoped policy залишається покращенням. ServiceAccount Job не має Kubernetes API token; IAM-роль оркестратора має права на Jobs і читання логів лише в `mlops-training`, не в production.
+
+У GitHub потрібні secrets `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION=eu-central-1`. `AWS_STEP_FUNCTION_ARN` більше не потрібний: ARN `final-mlops-training` визначається для поточного AWS-аккаунта. CI-користувачу потрібні `states:DescribeStateMachine`, `states:StartExecution` для цієї state machine, `states:DescribeExecution` і `states:StopExecution` для її executions.
+
+Після push змін коду або ручного `Run workflow` перевірити Step Functions -> `final-mlops-training`, Job `iris-train-*` у `mlops-training` та нову версію `iris-classifier` у Staging. Встановлення залежностей займає довше, ніж саме навчання; Job обмежено 25 хвилинами, workflow Step Functions - 30 хвилинами. Job видаляється через добу після завершення. При скасуванні CI перевірити execution/Job: скасування GitHub не гарантує зупинку Job.
+
+AWS-ресурси створено через Terraform. Наскрізний запуск перевіряється окремо; наявність state machine сама по собі не означає успішне навчання.
+
 ## Безпека та перевірки
 
 - **F1:** інтеграційний тест запускає справжній `train_register.py` двічі з ізольованою SQLite-базою MLflow, перевіряє метрики, реєстрацію версій у Staging, теги та checksum завантаженого `model.joblib`, а також передбачення з нього. Тест пройшов локально; AWS не використовується. Наявні workflows запускають його через `pytest tests`; результат нового запуску GitHub Actions ще не перевірено.
@@ -238,6 +267,7 @@ evidently_drift_score{source="iris_demo"}
 kubectl delete -f terraform/argocd/applicationset.yaml --ignore-not-found --wait=true --timeout=300s
 kubectl get applications -n mlops-system
 kubectl delete svc inference-public -n production --ignore-not-found --wait=true --timeout=300s
+terraform -chdir=terraform/training destroy
 cd terraform/argocd
 terraform destroy
 cd ../eks

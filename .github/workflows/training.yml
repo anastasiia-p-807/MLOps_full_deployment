@@ -14,9 +14,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: final-training
+  cancel-in-progress: false
+
 jobs:
   test-and-start-training:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -40,9 +45,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
       - name: Start Step Function training pipeline
+        env:
+          TRAINING_GIT_SHA: ${{ github.sha }}
         run: |
-          aws stepfunctions start-execution \
-            --region "${{ secrets.AWS_DEFAULT_REGION }}" \
-            --state-machine-arn "${{ secrets.AWS_STEP_FUNCTION_ARN }}" \
-            --name "final-train-${{ github.run_id }}" \
-            --input "{\"source\":\"github-actions\",\"git_sha\":\"${{ github.sha }}\",\"dataset_version\":\"iris-v1\"}"
+          python apps/training/run_pipeline.py --git-sha "$TRAINING_GIT_SHA"

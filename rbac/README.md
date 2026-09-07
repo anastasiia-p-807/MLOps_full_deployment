@@ -33,6 +33,8 @@ kubectl auth can-i get secrets -n production --as=rbac-viewer-check --as-group=v
 
 ## Технічна облікова запис
 
+`training-runner.yaml` додає окремий namespace `mlops-training`, ServiceAccount без API token та Role/RoleBinding для групи `training-orchestrator`. IAM-роль Step Functions приєднується до групи через EKS access entry у `terraform/training`. Дозволено створювати, читати й видаляти Jobs, читати pod metadata/логи тільки в цьому namespace. Доступу до production або Secrets через API немає. Створення Jobs дозволяє використати runtime secret свого namespace, тому право запуску state machine надається лише довіреному CI.
+
 ServiceAccount `monitoring/log-reader` призначений для збору логів. Він може читати pod metadata і pod logs лише у staging, production та mlops-system. Не може читати Secrets, виконувати команди в контейнерах, змінювати workloads або звертатися до nodes/proxy. ClusterRole/ClusterRoleBinding для нього не створюються. Це не третя користувацька роль.
 
 ```powershell
