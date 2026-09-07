@@ -65,17 +65,15 @@ def main() -> None:
             )
 
             client = mlflow.tracking.MlflowClient()
-            latest = client.get_latest_versions(args.model_name)[-1]
-            client.set_model_version_tag(args.model_name, latest.version, "git_sha", args.git_sha)
+            version = model_info.registered_model_version
+            client.set_model_version_tag(args.model_name, version, "git_sha", args.git_sha)
             client.set_model_version_tag(
-                args.model_name, latest.version, "dataset_version", args.dataset_version
+                args.model_name, version, "dataset_version", args.dataset_version
             )
-            client.set_model_version_tag(
-                args.model_name, latest.version, "checksum_sha256", checksum
-            )
+            client.set_model_version_tag(args.model_name, version, "checksum_sha256", checksum)
             client.transition_model_version_stage(
                 name=args.model_name,
-                version=latest.version,
+                version=version,
                 stage="Staging",
                 archive_existing_versions=False,
             )
@@ -83,7 +81,7 @@ def main() -> None:
             print(f"run_id={run.info.run_id}")
             print(f"model_uri={model_info.model_uri}")
             print(f"registered_model_name={args.model_name}")
-            print(f"version={latest.version}")
+            print(f"version={version}")
             print("stage=Staging")
             print(f"accuracy={accuracy:.4f}")
             print(f"loss={loss:.4f}")

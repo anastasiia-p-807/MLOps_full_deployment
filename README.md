@@ -8,7 +8,11 @@
 
 ## Доступ для перевірки
 
-Результати роботи показано на скріншотах у `Screenshots/`. Доступ до UI та API реалізовано через `kubectl port-forward`; посилання `localhost` працюють лише на комп'ютері, де запущено відповідну команду. Зовнішній Ingress/Load Balancer не налаштовано. Самостійний доступ з іншого комп'ютера потребує окремо наданого доступу до кластера та власного port-forward або узгодженої демонстрації екрана.
+Результати роботи показано на скріншотах у `Screenshots/`. Для перевірки production inference створено окремий Service `inference-public` типу `LoadBalancer` (AWS NLB). UI Grafana, MLflow та MinIO залишаються доступними лише через `kubectl port-forward`; їхні посилання `localhost` не доступні з іншого комп'ютера.
+
+Публічний API: [health](http://a5fa5ba1610334c45b5619071d63f630-1b3a1daa13299a81.elb.eu-central-1.amazonaws.com/health), [Swagger UI](http://a5fa5ba1610334c45b5619071d63f630-1b3a1daa13299a81.elb.eu-central-1.amazonaws.com/docs). У Swagger вибрати `POST /predict`, натиснути `Try it out` та передати `{"features": [5.1, 3.5, 1.4, 0.2]}`.
+
+Це тимчасовий навчальний HTTP endpoint без TLS та авторизації; відкрито також `/metrics`. Не передавати секрети або персональні дані. Адреса працює, поки існують кластер і балансировщик. NLB платний; після перевірки його потрібно видалити разом із сервісом. Манифест: `gitops/manifests/inference/production/public-service.yaml`.
 
 Незавершені пункти, зокрема частину обов'язкових вимог, перелічено в розділі «Подальші покращення». Їх не подано як виконані.
 
@@ -186,6 +190,8 @@ Staging і production мають окремі namespace-и та Deployment-и. �
 
 ## Безпека та перевірки
 
+- **F1:** інтеграційний тест запускає справжній `train_register.py` двічі з ізольованою SQLite-базою MLflow, перевіряє метрики, реєстрацію версій у Staging, теги та checksum завантаженого `model.joblib`, а також передбачення з нього. Тест пройшов локально; AWS не використовується. Наявні workflows запускають його через `pytest tests`; результат нового запуску GitHub Actions ще не перевірено.
+
 - Перевірено SHA256 моделі під час запуску контейнера.
 - RBAC застосовано через Argo CD: `mlops-engineer` має повний доступ до staging та читання production; `viewer` - лише читання без Secrets. Дозволи та заборони перевірено через `kubectl auth can-i`; опис у `rbac/README.md`.
 - Alloy читає pod logs через окремий ServiceAccount з namespaced правами, без ClusterRole та доступу до Secrets.
@@ -221,7 +227,7 @@ evidently_drift_score{source="iris_demo"}
 - **C1, C2:** зібрати оновлений inference-образ і перевірити HTTP 400/429 у кластері.
 - **C5:** надсилати аудит операцій Model Registry у Loki.
 - **E1, E3:** обчислювати drift за реальними production-передбаченнями та описати escalation policy і contact points.
-- **F1-F3:** доповнити integration-тести повного training run, перевірити lint/hooks і сканування саме контейнерного образу в CI. Наявний Trivy workflow сканує файли репозиторію.
+- **F2-F3:** перевірити lint/hooks і сканування саме контейнерного образу в CI. Наявний Trivy workflow сканує файли репозиторію.
 - Перейти від `emptyDir` до постійного сховища для metadata та artifacts MLflow.
 
 ## Destroy
@@ -229,7 +235,9 @@ evidently_drift_score{source="iris_demo"}
 Після завершення перевірок видалити ресурси у зворотному порядку. Ці команди наведено для майбутнього очищення; фінальний destroy ще не підтверджено. Починати з кореня репозиторію та дочекатися видалення дочірніх Applications до зупинки Argo CD:
 
 ```powershell
-kubectl delete -f terraform/argocd/applicationset.yaml --ignore-not-found
+kubectl delete -f terraform/argocd/applicationset.yaml --ignore-not-found --wait=true --timeout=300s
+kubectl get applications -n mlops-system
+kubectl delete svc inference-public -n production --ignore-not-found --wait=true --timeout=300s
 cd terraform/argocd
 terraform destroy
 cd ../eks
